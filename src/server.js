@@ -1,12 +1,15 @@
+require("dotenv").config();
+
 const express = require("express");
 const mongoose = require("mongoose");
 const cors = require("cors");
 const path = require("path");
 const app = express();
 
+const mongodb_sting = process.env.MONGODB_STRING || '';
+
 mongoose
-  .connect(
-    "mongodb+srv://tractian:cafe1234@cluster0.dzqoz.mongodb.net/myFirstDatabase?retryWrites=true&w=majority",
+  .connect(mongodb_sting,
     {
       useNewUrlParser: true,
       useUnifiedTopology: true,
@@ -29,6 +32,8 @@ app.use(
 );
 app.use("/", routes);
 
-app.listen(3333, function () {
-  console.log("listening on 3333");
+const port = process.env.PORT || 3000;
+
+app.listen(port, function () {
+  console.log(`listening on ${port}`);
 });
