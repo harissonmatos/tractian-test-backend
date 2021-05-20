@@ -16,7 +16,7 @@ module.exports = {
         try {
             const {usuario_id} = req.params;
 
-            const usuario = await Usuario.findById(usuario_id).populate('empresa');
+            const usuario = await Usuario.findById(usuario_id);
 
             return res.json(usuario);
         } catch (err) {
@@ -24,7 +24,7 @@ module.exports = {
         }
     },
 
-    async store(req, res) {
+    async save(req, res) {
         try {
 
             const empresa = await Empresa.findById(req.body.empresa);
@@ -33,35 +33,21 @@ module.exports = {
                 return res.status(400).json({err: 'Empresa não existe'});
             }
 
-            const usuario = await Usuario.create({
-                nome: req.body.nome.trim(),
-                empresa: req.body.empresa
-            })
+            let usuario;
 
-            await usuario.populate('empresa').execPopulate();
-
-            return res.json(usuario);
-        } catch (err) {
-            return res.json({err});
-        }
-    },
-
-    async update(req, res) {
-        try {
-            const {usuario_id} = req.params;
-
-            const empresa = await Empresa.findById(req.body.empresa);
-
-            if (!empresa) {
-                return res.status(400).json({err: 'Empresa não existe'});
+            if (typeof req.body._id === 'undefined') {
+                usuario = await Usuario.create({
+                    nome: req.body.nome.trim(),
+                    empresa: req.body.empresa
+                });
+            } else {
+                unidade = await Usuario.findByIdAndUpdate(req.body._id, {
+                    nome: req.body.nome.trim(),
+                    empresa: req.body.empresa
+                }, {new: true});
             }
 
-            let usuario = await Usuario.findByIdAndUpdate(usuario_id, {
-                nome: req.body.nome.trim(),
-                empresa: req.body.empresa
-            }, {new: true});
-
-            await usuario.populate('empresa').execPopulate();
+            await usuario;
 
             return res.json(usuario);
         } catch (err) {

@@ -23,25 +23,21 @@ module.exports = {
         }
     },
 
-    async store(req, res) {
+    async save(req, res) {
         try {
-            const empresa = await Empresa.create({
-                nome: req.body.nome.trim()
-            })
 
-            return res.json(empresa);
-        } catch (err) {
-            return res.json({err});
-        }
-    },
+            let empresa;
 
-    async update(req, res) {
-        try {
-            const {empresa_id} = req.params;
+            if (typeof req.body._id === 'undefined') {
+                empresa = await Empresa.create({
+                    nome: req.body.nome.trim()
+                })
+            } else {
+                empresa = await Empresa.findByIdAndUpdate(req.body._id, {
+                    nome: req.body.nome.trim()
+                }, {new: true});
+            }
 
-            let empresa = await Empresa.findByIdAndUpdate(empresa_id, {
-                nome: req.body.nome.trim(),
-            }, {new: true});
 
             return res.json(empresa);
         } catch (err) {

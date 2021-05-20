@@ -16,7 +16,7 @@ module.exports = {
         try {
             const {unidade_id} = req.params;
 
-            const unidade = await Unidade.findById(unidade_id).populate('empresa');
+            const unidade = await Unidade.findById(unidade_id);
 
             return res.json(unidade);
         } catch (err) {
@@ -24,7 +24,7 @@ module.exports = {
         }
     },
 
-    async store(req, res) {
+    async save(req, res) {
         try {
             const empresa = await Empresa.findById(req.body.empresa);
 
@@ -32,35 +32,19 @@ module.exports = {
                 return res.status(400).json({err: 'Empresa não existe'});
             }
 
-            const unidade = await Unidade.create({
-                nome: req.body.nome.trim(),
-                empresa: req.body.empresa
-            });
+            let unidade;
 
-            await unidade.populate('empresa').execPopulate();
-
-            return res.json(unidade);
-        } catch (err) {
-            return res.json({err});
-        }
-    },
-
-    async update(req, res) {
-        try {
-            const empresa = await Empresa.findById(req.body.empresa);
-
-            if (!empresa) {
-                return res.status(400).json({err: 'Empresa não existe'});
+            if (typeof req.body._id === 'undefined') {
+                unidade = await Unidade.create({
+                    nome: req.body.nome.trim(),
+                    empresa: req.body.empresa
+                });
+            } else {
+                unidade = await Unidade.findByIdAndUpdate(req.body._id, {
+                    nome: req.body.nome.trim(),
+                    empresa: req.body.empresa
+                }, {new: true});
             }
-
-            const {unidade_id} = req.params;
-
-            const unidade = await Unidade.findByIdAndUpdate(unidade_id, {
-                nome: req.body.nome.trim(),
-                empresa: req.body.empresa
-            }, {new: true});
-
-            await unidade.populate('empresa').execPopulate();
 
             return res.json(unidade);
         } catch (err) {

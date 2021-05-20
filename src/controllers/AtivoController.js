@@ -5,32 +5,37 @@ const Unidade = require('../models/Unidade');
 module.exports = {
     async index(req, res) {
         try {
-            let filtro_empresa = {};
-            let filtro_unidade = {};
-            let fitro_ativo = {};
+            let filtro_ativo = {};
 
-            const unidades_empresa = [];
-            const ativos_empresa = [];
+            if (req.method === 'POST') {
+                const nome = req.body.nome ? req.body.nome.trim() : null;
+                nome ? filtro_ativo.nome = { $regex: '.*' + nome + '.*', $options : 'i' } : null;
 
-            const empresas = await Empresa.find(filtro_empresa);
+                const unidade = req.body.unidade && req.body.unidade.length > 0 ? req.body.unidade : null;
+                unidade ? filtro_ativo.unidade = unidade : null;
 
-            await Promise.all(empresas.map(async empresa => {
-                const unidades = await Unidade.find({empresa: empresa._id, ...filtro_unidade});
-                unidades.map(async unidade => unidades_empresa.push(unidade));
-            }));
+                const modelo = req.body.modelo ? req.body.modelo.trim() : null;
+                modelo ? filtro_ativo.modelo = { $regex: '.*' + modelo + '.*', $options : 'i' } : null;
 
-            await Promise.all(unidades_empresa.map(async unidade => {
-                const ativos = await Ativo.find({unidade: unidade._id, ...fitro_ativo}).populate({
+                const responsavel = req.body.responsavel ? req.body.responsavel.trim() : null;
+                responsavel ? filtro_ativo.responsavel = { $regex: '.*' + responsavel + '.*', $options : 'i' } : null;
+
+                const status = req.body.status && req.body.status.length > 0 ? req.body.status : null;
+                status ? filtro_ativo.status = status : null;
+            };
+
+            const ativos = await Ativo.find({...filtro_ativo})
+                .populate({
                     path: 'unidade',
+                    select: '_id nome',
                     populate: {
                         path: 'empresa',
-                        model: 'Empresa'
+                        model: 'Empresa',
+                        select: '_id nome',
                     }
                 });
-                ativos.map(async unidade => ativos_empresa.push(ativos));
-            }));
 
-            return res.json(ativos_empresa);
+            return res.json(ativos);
         } catch (err) {
             return res.json({err});
         }
@@ -40,14 +45,7 @@ module.exports = {
         try {
             const {ativo_id} = req.params;
 
-            const ativo = await Ativo.findById(ativo_id)
-                .populate({
-                    path: 'unidade',
-                    populate: {
-                        path: 'empresa',
-                        model: 'Empresa'
-                    }
-                });
+            const ativo = await Ativo.findById(ativo_id);
 
             return res.json(ativo);
         } catch (err) {
@@ -55,7 +53,7 @@ module.exports = {
         }
     },
 
-    async store(req, res) {
+    async save(req, res) {
         try {
             const unidade = await Unidade.findById(req.body.unidade);
 
@@ -63,8 +61,7 @@ module.exports = {
                 return res.status(400).json({err: 'Unidade não existe'});
             }
 
-            const ativo = await Ativo.create({
-                imagem: req.body.imagem,
+            const data = {
                 nome: req.body.nome.trim(),
                 descricao: req.body.descricao.trim(),
                 modelo: req.body.modelo.trim(),
@@ -72,55 +69,23 @@ module.exports = {
                 status: req.body.status,
                 nivel_saude: req.body.nivel_saude,
                 unidade: req.body.unidade
-            })
+            };
 
-            await ativo.populate({
-                path: 'unidade',
-                populate: {
-                    path: 'empresa',
-                    model: 'Empresa'
-                }
-            }).execPopulate();
-
-            return res.json(ativo);
-        } catch (err) {
-            console.log(err);
-            return res.json({err});
-        }
-    },
-
-    async update(req, res) {
-        try {
-            const unidade = await Unidade.findById(req.body.unidade);
-
-            if (!unidade) {
-                return res.status(400).json({err: 'Unidade não existe'});
+            if (typeof req.file !== 'undefined') {
+                data.imagem = req.file.filename;
             }
 
-            const {ativo_id} = req.params;
+            let ativo;
 
-            let ativo = await Ativo.findByIdAndUpdate(ativo_id, {
-                imagem: req.body.imagem,
-                nome: req.body.nome.trim(),
-                descricao: req.body.descricao.trim(),
-                modelo: req.body.modelo.trim(),
-                responsavel: req.body.responsavel.trim(),
-                status: req.body.status,
-                nivel_saude: req.body.nivel_saude,
-                unidade: req.body.unidade
-            }, {new: true});
-
-            await ativo.populate({
-                path: 'unidade',
-                populate: {
-                    path: 'empresa',
-                    model: 'Empresa'
-                }
-            }).execPopulate();
+            if (typeof req.body._id === 'undefined') {
+                ativo = await Ativo.create(data);
+            } else {
+                ativo = await Ativo.findByIdAndUpdate(req.body._id, data, {new: true});
+            }
 
             return res.json(ativo);
         } catch (err) {
-            return res.json({err});
+            return res.json({err: err.message});
         }
     },
 
